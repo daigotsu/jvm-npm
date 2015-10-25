@@ -75,7 +75,7 @@ module = (typeof module == 'undefined') ? {} :  module;
 
   function Require(id, parent) {
     var core, native, file = Require.resolve(id, parent);
-
+    System.out.println("{" + id + "," + parent + " (" + (typeof parent) + ")} -> (" + core + "," + native + "," + file + ")");
     if (!file) {
       if (typeof NativeRequire.require === 'function') {
         if (Require.debug) {
@@ -117,6 +117,7 @@ module = (typeof module == 'undefined') ? {} :  module;
       var result = resolveCoreModule(id, root) ||
         resolveAsFile(id, root, '.js')   ||
         resolveAsFile(id, root, '.json') ||
+        resolveAsFileByLocator(id, root) ||
         resolveAsDirectory(id, root)     ||
         resolveAsNodeModule(id, root);
       if ( result ) {
@@ -132,7 +133,7 @@ module = (typeof module == 'undefined') ? {} :  module;
   function findRoots(parent) {
     var r = [];
     r.push( findRoot( parent ) );
-    return r.concat( Require.paths() );
+    return r.concat( Require.paths() ).concat( Require.locatorPaths() );
   }
 
   function parsePaths(paths) {
@@ -168,6 +169,21 @@ module = (typeof module == 'undefined') ? {} :  module;
       }
     }
     // r.push( $PREFIX + "/node/library" );
+    return r;
+  };
+
+    /**
+     * Provides additional pathes through an optional binding allowing to locate additional roots.
+     * https://github.com/aperto/jvm-npm/commit/6df14e01508c15413c51fd3bc066a39132be61d5
+     */
+  Require.locatorPaths = function () {
+    var r = [];
+    if (__locator != undefined) {
+      var root = __locator.findRoot();
+      if (root != undefined) {
+        r.push(root);
+      }
+    }
     return r;
   };
 
@@ -233,6 +249,16 @@ module = (typeof module == 'undefined') ? {} :  module;
       return file.getCanonicalPath();
     }
   }
+
+    /**
+     * https://github.com/aperto/jvm-npm/commit/1bbf6714cb5184113e32956485963df35088060e
+     */
+    function resolveAsFileByLocator(id, root) {
+        var file;
+        if (__locator != undefined) {
+            return __locator.resolve(id, root);
+        }
+    }
 
   function resolveCoreModule(id, root) {
     var name = normalizeName(id);
