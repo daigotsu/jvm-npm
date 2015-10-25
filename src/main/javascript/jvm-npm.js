@@ -59,8 +59,13 @@ module = (typeof module == 'undefined') ? {} :  module;
     var __FILENAME__ = module.filename;
     var body   = readFile(module.filename, module.core),
         dir    = new File(module.filename).getParent(),
-        args   = ['exports', 'module', 'require', '__filename', '__dirname'],
-        func   = new Function(args, body);
+        //args   = ['exports', 'module', 'require', '__filename', '__dirname'],
+        //func   = new Function(args, body);
+
+        //use load with script name (nashorn) for easier debugging
+        //https://github.com/dreameddeath/jvm-npm/commit/0cf041e799c5a782c5b3477bea2f7fd5b2ed5334
+        func   = load({script:"function(exports, module, require, __filename, __dirname){"+body+"}",name:module.filename});
+
     func.apply(module,
         [module.exports, module, module.require, module.filename, dir]);
     module.loaded = true;
@@ -190,6 +195,7 @@ module = (typeof module == 'undefined') ? {} :  module;
   function findRoot(parent) {
     if (!parent || !parent.id) { return Require.root; }
     var pathParts = parent.id.split('/');
+    //var pathParts = parent.id.split(/[\\\/]/); // https://github.com/dreameddeath/jvm-npm/commit/376c6860cc85e480c2f2e75b8e1d36ea837727ef
     pathParts.pop();
     return pathParts.join('/');
   }
@@ -261,6 +267,7 @@ module = (typeof module == 'undefined') ? {} :  module;
     }
 
   function resolveCoreModule(id, root) {
+    if (id.indexOf('./') == 0) return; // https://github.com/malaporte/jvm-npm/commit/46444351b2eb827f9c44a8e01b039fd9010267ef
     var name = normalizeName(id);
     var classloader = java.lang.Thread.currentThread().getContextClassLoader();
     if (classloader.findResource(name))
